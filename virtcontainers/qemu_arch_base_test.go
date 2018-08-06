@@ -471,7 +471,7 @@ func TestQemuArchBaseAppendNetwork(t *testing.T) {
 	expectedOut := []govmmQemu.Device{
 		govmmQemu.NetDevice{
 			Type:       networkModelToQemuType(macvlanEp.NetPair.NetInterworkingModel),
-			Driver:     govmmQemu.VirtioNetPCI,
+			Driver:     govmmQemu.VirtioNet,
 			ID:         fmt.Sprintf("network-%d", 0),
 			IFName:     macvlanEp.NetPair.TAPIface.Name,
 			MACAddress: macvlanEp.NetPair.TAPIface.HardAddr,
@@ -482,7 +482,7 @@ func TestQemuArchBaseAppendNetwork(t *testing.T) {
 		},
 		govmmQemu.NetDevice{
 			Type:       govmmQemu.MACVTAP,
-			Driver:     govmmQemu.VirtioNetPCI,
+			Driver:     govmmQemu.VirtioNet,
 			ID:         fmt.Sprintf("network-%d", 1),
 			IFName:     macvtapEp.Name(),
 			MACAddress: macvtapEp.HardwareAddr(),

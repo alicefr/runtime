@@ -148,6 +148,9 @@ const (
 
 	// QemuPseries is a QEMU virt machine type for ppc64le
 	QemuPseries = "pseries"
+
+	// QemuCCWVirtio is a QEMU virt machine type for for s390x
+	QemuCCWVirtio = "s390-ccw-virtio"
 )
 
 // kernelParamsNonDebug is a list of the default kernel
@@ -449,7 +452,7 @@ func (q *qemuArchBase) appendNetwork(devices []govmmQemu.Device, endpoint Endpoi
 		devices = append(devices,
 			govmmQemu.NetDevice{
 				Type:          networkModelToQemuType(netPair.NetInterworkingModel),
-				Driver:        govmmQemu.VirtioNetPCI,
+				Driver:        govmmQemu.VirtioNet,
 				ID:            fmt.Sprintf("network-%d", q.networkIndex),
 				IFName:        netPair.TAPIface.Name,
 				MACAddress:    netPair.TAPIface.HardAddr,
@@ -466,7 +469,7 @@ func (q *qemuArchBase) appendNetwork(devices []govmmQemu.Device, endpoint Endpoi
 		devices = append(devices,
 			govmmQemu.NetDevice{
 				Type:          govmmQemu.MACVTAP,
-				Driver:        govmmQemu.VirtioNetPCI,
+				Driver:        govmmQemu.VirtioNet,
 				ID:            fmt.Sprintf("network-%d", q.networkIndex),
 				IFName:        ep.Name(),
 				MACAddress:    ep.HardwareAddr(),

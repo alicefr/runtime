@@ -235,7 +235,7 @@ path = "@NETMONPATH@"
 # If enabled, the runtime will log additional debug messages to the
 # system log
 # (default: disabled)
-#enable_debug = true
+enable_debug = true
 #
 # Internetworking model
 # Determines how the VM should be connected to the

@@ -529,7 +529,6 @@ func (k *kataAgent) startProxy(sandbox *Sandbox) error {
 		"proxy-pid": pid,
 		"proxy-url": uri,
 	}).Info("proxy started")
-
 	return nil
 }
 
@@ -581,7 +580,6 @@ func (k *kataAgent) startSandbox(sandbox *Sandbox) error {
 	if len(hostname) > maxHostnameLen {
 		hostname = hostname[:maxHostnameLen]
 	}
-
 	// check grpc server is serving
 	if err = k.check(); err != nil {
 		return err

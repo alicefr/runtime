@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"runtime"
 	"time"
 
 	govmmQemu "github.com/intel/govmm/qemu"
@@ -276,7 +277,6 @@ func (q *qemu) hostMemMB() (uint64, error) {
 	if hostMemKb == 0 {
 		return 0, fmt.Errorf("Error host memory size 0")
 	}
-
 	return hostMemKb / 1024, nil
 }
 
@@ -554,7 +554,6 @@ func (q *qemu) startSandbox() error {
 	if err != nil {
 		return fmt.Errorf("%s", strErr)
 	}
-
 	return nil
 }
 
@@ -608,7 +607,6 @@ func (q *qemu) waitSandbox(timeout int) error {
 		q.Logger().WithError(err).Error(qmpCapErrMsg)
 		return err
 	}
-
 	return nil
 }
 
@@ -634,7 +632,6 @@ func (q *qemu) stopSandbox() error {
 	if err != nil {
 		q.Logger().WithError(err).Error("Fail to clean up vm directory")
 	}
-
 	return nil
 }
 
@@ -892,7 +889,13 @@ func (q *qemu) hotplugNetDevice(endpoint Endpoint, op operation) error {
 		endpoint.SetPciAddr(pciAddr)
 
 		devID := "virtio-" + tap.ID
-		if err = q.qmpMonitorCh.qmp.ExecuteNetPCIDeviceAdd(q.qmpMonitorCh.ctx, tap.Name, devID, endpoint.HardwareAddr(), addr, bridge.ID, romFile, int(q.config.NumVCPUs)); err != nil {
+
+		if runtime.GOARCH == "s390x" {
+			err = q.qmpMonitorCh.qmp.ExecuteNetCCWDeviceAdd(q.qmpMonitorCh.ctx, tap.Name, devID, endpoint.HardwareAddr(), addr, bridge.ID, int(q.config.NumVCPUs))
+		} else {
+			err = q.qmpMonitorCh.qmp.ExecuteNetPCIDeviceAdd(q.qmpMonitorCh.ctx, tap.Name, devID, endpoint.HardwareAddr(), addr, bridge.ID, romFile, int(q.config.NumVCPUs))
+		}
+		if err != nil {
 			return err
 		}
 	} else {
@@ -1287,6 +1290,8 @@ func genericBridges(number uint32, machineType string) []Bridge {
 	case QemuVirt:
 		bt = pcieBridge
 	case QemuPseries:
+		bt = pciBridge
+	case QemuCCWVirtio:
 		bt = pciBridge
 	default:
 		return nil

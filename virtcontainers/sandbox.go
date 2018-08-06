@@ -763,7 +763,6 @@ func createSandbox(ctx context.Context, sandboxConfig SandboxConfig, factory Fac
 	if err == nil {
 		s.networkNS = networkNS
 	}
-
 	devices, err := s.storage.fetchSandboxDevices(s.id)
 	if err != nil {
 		s.Logger().WithError(err).WithField("sandboxid", s.id).Warning("fetch sandbox device failed")
