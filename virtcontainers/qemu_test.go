@@ -249,7 +249,7 @@ func TestQemuAddDeviceSerialPortDev(t *testing.T) {
 }
 
 func TestQemuAddDeviceKataVSOCK(t *testing.T) {
-	contextID := uint32(3)
+	contextID := uint64(3)
 	port := uint32(1024)
 	vHostFD := os.NewFile(1, "vsock")
 
