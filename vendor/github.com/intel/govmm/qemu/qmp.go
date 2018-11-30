@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright contributors to the Virtual Machine Manager for Go project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -722,11 +722,7 @@ func (q *QMP) ExecuteQuit(ctx context.Context) error {
 	return q.executeCommand(ctx, "quit", nil, nil)
 }
 
-// ExecuteBlockdevAdd sends a blockdev-add to the QEMU instance.  device is the
-// path of the device to add, e.g., /dev/rdb0, and blockdevID is an identifier
-// used to name the device.  As this identifier will be passed directly to QMP,
-// it must obey QMP's naming rules, e,g., it must start with a letter.
-func (q *QMP) ExecuteBlockdevAdd(ctx context.Context, device, blockdevID string) error {
+func (q *QMP) blockdevAddBaseArgs(device, blockdevID string) (map[string]interface{}, map[string]interface{}) {
 	var args map[string]interface{}
 
 	blockdevArgs := map[string]interface{}{
@@ -745,6 +741,39 @@ func (q *QMP) ExecuteBlockdevAdd(ctx context.Context, device, blockdevID string)
 		args = map[string]interface{}{
 			"options": blockdevArgs,
 		}
+	}
+
+	return args, blockdevArgs
+}
+
+// ExecuteBlockdevAdd sends a blockdev-add to the QEMU instance.  device is the
+// path of the device to add, e.g., /dev/rdb0, and blockdevID is an identifier
+// used to name the device.  As this identifier will be passed directly to QMP,
+// it must obey QMP's naming rules, e,g., it must start with a letter.
+func (q *QMP) ExecuteBlockdevAdd(ctx context.Context, device, blockdevID string) error {
+	args, _ := q.blockdevAddBaseArgs(device, blockdevID)
+
+	return q.executeCommand(ctx, "blockdev-add", args, nil)
+}
+
+// ExecuteBlockdevAddWithCache has two more parameters direct and noFlush
+// than ExecuteBlockdevAdd.
+// They are cache-related options for block devices that are described in
+// https://github.com/qemu/qemu/blob/master/qapi/block-core.json.
+// direct denotes whether use of O_DIRECT (bypass the host page cache)
+// is enabled.  noFlush denotes whether flush requests for the device are
+// ignored.
+func (q *QMP) ExecuteBlockdevAddWithCache(ctx context.Context, device, blockdevID string, direct, noFlush bool) error {
+	args, blockdevArgs := q.blockdevAddBaseArgs(device, blockdevID)
+
+	if q.version.Major < 2 || (q.version.Major == 2 && q.version.Minor < 9) {
+		return fmt.Errorf("versions of qemu (%d.%d) older than 2.9 do not support set cache-related options for block devices",
+			q.version.Major, q.version.Minor)
+	}
+
+	blockdevArgs["cache"] = map[string]interface{}{
+		"direct":   direct,
+		"no-flush": noFlush,
 	}
 
 	return q.executeCommand(ctx, "blockdev-add", args, nil)
@@ -942,6 +971,26 @@ func (q *QMP) ExecuteNetPCIDeviceAdd(ctx context.Context, netdevID, devID, macAd
 	return q.executeCommand(ctx, "device_add", args, nil)
 }
 
+// ExecuteNetCCWDeviceAdd adds a Net CCW device to a QEMU instance
+// using the device_add command. devID is the id of the device to add.
+// Must be valid QMP identifier. netdevID is the id of nic added by previous netdev_add.
+// queues is the number of queues of a nic.
+func (q *QMP) ExecuteNetCCWDeviceAdd(ctx context.Context, netdevID, devID, macAddr, addr, bus string, queues int) error {
+	args := map[string]interface{}{
+		"id":     devID,
+		"driver": VirtioNetCCW,
+		"netdev": netdevID,
+		"mac":    macAddr,
+		"addr":   addr,
+	}
+
+	if queues > 0 {
+		args["mq"] = "on"
+	}
+
+	return q.executeCommand(ctx, "device_add", args, nil)
+}
+
 // ExecuteDeviceDel deletes guest portion of a QEMU device by sending a
 // device_del command.   devId is the identifier of the device to delete.
 // Typically it would match the devID parameter passed to an earlier call
@@ -991,7 +1040,7 @@ func (q *QMP) ExecutePCIDeviceAdd(ctx context.Context, blockdevID, devID, driver
 func (q *QMP) ExecuteVFIODeviceAdd(ctx context.Context, devID, bdf, romfile string) error {
 	args := map[string]interface{}{
 		"id":      devID,
-		"driver":  "vfio-pci",
+		"driver":  Vfio,
 		"host":    bdf,
 		"romfile": romfile,
 	}
@@ -1006,11 +1055,12 @@ func (q *QMP) ExecuteVFIODeviceAdd(ctx context.Context, devID, bdf, romfile stri
 func (q *QMP) ExecutePCIVFIODeviceAdd(ctx context.Context, devID, bdf, addr, bus, romfile string) error {
 	args := map[string]interface{}{
 		"id":      devID,
-		"driver":  "vfio-pci",
+		"driver":  Vfio,
 		"host":    bdf,
 		"addr":    addr,
 		"romfile": romfile,
 	}
+
 	if bus != "" {
 		args["bus"] = bus
 	}
@@ -1025,10 +1075,11 @@ func (q *QMP) ExecutePCIVFIODeviceAdd(ctx context.Context, devID, bdf, addr, bus
 func (q *QMP) ExecutePCIVFIOMediatedDeviceAdd(ctx context.Context, devID, sysfsdev, addr, bus, romfile string) error {
 	args := map[string]interface{}{
 		"id":       devID,
-		"driver":   "vfio-pci",
+		"driver":   Vfio,
 		"sysfsdev": sysfsdev,
 		"romfile":  romfile,
 	}
+
 	if bus != "" {
 		args["bus"] = bus
 	}
@@ -1170,13 +1221,14 @@ func (q *QMP) ExecQueryCpusFast(ctx context.Context) ([]CPUInfoFast, error) {
 
 // ExecHotplugMemory adds size of MiB memory to the guest
 func (q *QMP) ExecHotplugMemory(ctx context.Context, qomtype, id, mempath string, size int) error {
+	props := map[string]interface{}{"size": uint64(size) << 20}
 	args := map[string]interface{}{
 		"qom-type": qomtype,
 		"id":       id,
-		"props":    map[string]interface{}{"size": uint64(size) << 20},
+		"props":    props,
 	}
 	if mempath != "" {
-		args["mem-path"] = mempath
+		props["mem-path"] = mempath
 	}
 	err := q.executeCommand(ctx, "object-add", args, nil)
 	if err != nil {
@@ -1215,7 +1267,7 @@ func (q *QMP) ExecuteBalloon(ctx context.Context, bytes uint64) error {
 // ExecutePCIVSockAdd adds a vhost-vsock-pci bus
 func (q *QMP) ExecutePCIVSockAdd(ctx context.Context, id, guestCID, vhostfd, addr, bus, romfile string, disableModern bool) error {
 	args := map[string]interface{}{
-		"driver":    VHostVSockPCI,
+		"driver":    VHostVSock,
 		"id":        id,
 		"guest-cid": guestCID,
 		"vhostfd":   vhostfd,
