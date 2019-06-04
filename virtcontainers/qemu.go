@@ -1609,6 +1609,9 @@ func genericAppendBridges(devices []govmmQemu.Device, bridges []types.Bridge, ma
 		if b.Type == types.PCIE {
 			t = govmmQemu.PCIEBridge
 		}
+		if b.Type == types.CCW {
+			continue
+		}
 
 		bridges[idx].Addr = bridgePCIStartAddr + idx
 

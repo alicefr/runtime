@@ -41,6 +41,13 @@ var kernelParams = []Param{
 
 var kernelRootParams = commonVirtioblkKernelRootParams
 
+var ccwbridge = types.Bridge{
+	Address:           make(map[uint32]string, types.CCWBridgeMaxCapacity),
+	Addr:              0,
+	BridgeMaxCapacity: types.CCWBridgeMaxCapacity,
+	Type:              types.CCW,
+}
+
 var supportedQemuMachines = []govmmQemu.Machine{
 	{
 		Type:    QemuCCWVirtio,
@@ -73,6 +80,8 @@ func newQemuArch(config HypervisorConfig) qemuArch {
 			kernelParams:          kernelParams,
 		},
 	}
+	// Set first bridge type to CCW
+	q.Bridges = append(q.Bridges, ccwbridge)
 
 	if config.ImagePath != "" {
 		q.kernelParams = append(q.kernelParams, kernelRootParams...)

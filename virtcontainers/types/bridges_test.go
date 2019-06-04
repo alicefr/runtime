@@ -50,3 +50,11 @@ func TestAddRemoveDevicePCI(t *testing.T) {
 
 	testAddRemoveDevice(t, bridges[0])
 }
+
+func TestAddRemoveDeviceCCW(t *testing.T) {
+
+	// create a CCW bridge
+	bridges := []*Bridge{{make(map[uint32]string), "rgb123", 5, CCW, ccwBridgeMaxCapacity}}
+
+	testAddRemoveDevice(t, bridges[0])
+}

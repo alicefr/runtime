@@ -76,3 +76,25 @@ const (
 	// PCIE represents a PCIe bus and bridge
 	PCIE Type = "pcie"
 )
+
+const CCWBridgeMaxCapacity = 0xffff
+
+const (
+	CCW Type = "ccw"
+)
+
+// AddressFormatCCW returns the address format for the device number. The channel subsystem-ID 0xfe is reserved to the virtual channel and the address format is in the form fe.n.dddd, where n is subchannel set ID and ddd the device number. More details at https://www.ibm.com/support/knowledgecenter/en/linuxonibm/com.ibm.linux.z.ldva/ldva_t_configuringSCSIdevices.html
+func (b *Bridge) AddressFormatCCW(addr string) (string, error) {
+	if b.Type != CCW {
+		return "", fmt.Errorf("Wrong bridge type")
+	}
+	return fmt.Sprintf("fe.%x.%s", b.Addr, addr), nil
+}
+
+// AddressFormatCCWForVirtServer returns the address format for the virtual server. The address format is in the form of 0.n.dddd
+func (b *Bridge) AddressFormatCCWForVirtServer(addr string) (string, error) {
+	if b.Type != CCW {
+		return "", fmt.Errorf("Wrong bridge type")
+	}
+	return fmt.Sprintf("0.%x.%s", b.Addr, addr), nil
+}
