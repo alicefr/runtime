@@ -55,7 +55,7 @@ type CPUDevice struct {
 
 // QemuState keeps Qemu's state
 type QemuState struct {
-	Bridges []types.PCIBridge
+	Bridges []types.Bridge
 	// HotpluggedCPUs is the list of CPUs that were hot-added
 	HotpluggedVCPUs      []CPUDevice
 	HotpluggedMemory     int
@@ -881,12 +881,12 @@ func (q *qemu) qmpShutdown() {
 	}
 }
 
-func (q *qemu) addDeviceToBridge(ID string) (string, types.PCIBridge, error) {
+func (q *qemu) addDeviceToBridge(ID string) (string, types.Bridge, error) {
 	var err error
 	var addr uint32
 
 	if len(q.state.Bridges) == 0 {
-		return "", types.PCIBridge{}, errors.New("failed to get available address from bridges")
+		return "", types.Bridge{}, errors.New("failed to get available address from bridges")
 	}
 
 	// looking for an empty address in the bridges
@@ -897,7 +897,7 @@ func (q *qemu) addDeviceToBridge(ID string) (string, types.PCIBridge, error) {
 		}
 	}
 
-	return "", types.PCIBridge{}, fmt.Errorf("no more bridge slots available")
+	return "", types.Bridge{}, fmt.Errorf("no more bridge slots available")
 }
 
 func (q *qemu) removeDeviceFromBridge(ID string) error {
@@ -1597,7 +1597,7 @@ func (q *qemu) resizeMemory(reqMemMB uint32, memoryBlockSizeMB uint32, probe boo
 
 // genericAppendBridges appends to devices the given bridges
 // nolint: unused, deadcode
-func genericAppendBridges(devices []govmmQemu.Device, bridges []types.PCIBridge, machineType string) []govmmQemu.Device {
+func genericAppendBridges(devices []govmmQemu.Device, bridges []types.Bridge, machineType string) []govmmQemu.Device {
 	bus := defaultPCBridgeBus
 	switch machineType {
 	case QemuQ35, QemuVirt:
@@ -1629,9 +1629,9 @@ func genericAppendBridges(devices []govmmQemu.Device, bridges []types.PCIBridge,
 }
 
 // nolint: unused, deadcode
-func genericBridges(number uint32, machineType string) []types.PCIBridge {
-	var bridges []types.PCIBridge
-	var bt types.PCIType
+func genericBridges(number uint32, machineType string) []types.Bridge {
+	var bridges []types.Bridge
+	var bt types.Type
 
 	switch machineType {
 	case QemuQ35:
@@ -1651,7 +1651,7 @@ func genericBridges(number uint32, machineType string) []types.PCIBridge {
 	}
 
 	for i := uint32(0); i < number; i++ {
-		bridges = append(bridges, types.PCIBridge{
+		bridges = append(bridges, types.Bridge{
 			Type:    bt,
 			ID:      fmt.Sprintf("%s-bridge-%d", bt, i),
 			Address: make(map[uint32]string),

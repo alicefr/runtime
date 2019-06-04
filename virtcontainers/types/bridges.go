@@ -7,41 +7,38 @@ package types
 
 import "fmt"
 
-// PCIType represents a type of PCI bus and bridge.
-type PCIType string
+// Type represents a type of bus and bridge.
+type Type string
 
-const (
-	// PCI represents a PCI bus and bridge
-	PCI PCIType = "pci"
+type bridge interface {
+	// AddDevice on success adds the device ID to the bridge and returns the address where the device was added.
+	AddDevice(ID string) (uint32, error)
+	// RemoveDevice removes the device ID from the bridge.
+	RemoveDevice(ID string) error
+}
 
-	// PCIE represents a PCIe bus and bridge
-	PCIE PCIType = "pcie"
-)
-
-const pciBridgeMaxCapacity = 30
-
-// PCIBridge is a PCI or PCIe bridge where devices can be hot plugged
-type PCIBridge struct {
+type Bridge struct {
 	// Address contains information about devices plugged and its address in the bridge
 	Address map[uint32]string
-
-	// Type is the PCI type of the bridge (pci, pcie, etc)
-	Type PCIType
 
 	// ID is used to identify the bridge in the hypervisor
 	ID string
 
-	// Addr is the PCI/e slot of the bridge
+	// Addr is the slot of the bridge
 	Addr int
+
+	// Type is the type of the bridge (pci, pcie, etc)
+	Type Type
+
+	// BridgeMaxCapacity is the max capacity of the bridge
+	BridgeMaxCapacity uint32
 }
 
-// AddDevice on success adds the device ID to the PCI bridge and returns
-// the address where the device was added.
-func (b *PCIBridge) AddDevice(ID string) (uint32, error) {
+func (b *Bridge) AddDevice(ID string) (uint32, error) {
 	var addr uint32
 
 	// looking for the first available address
-	for i := uint32(1); i <= pciBridgeMaxCapacity; i++ {
+	for i := uint32(1); i <= b.BridgeMaxCapacity; i++ {
 		if _, ok := b.Address[i]; !ok {
 			addr = i
 			break
@@ -57,8 +54,7 @@ func (b *PCIBridge) AddDevice(ID string) (uint32, error) {
 	return addr, nil
 }
 
-// RemoveDevice removes the device ID from the PCI bridge.
-func (b *PCIBridge) RemoveDevice(ID string) error {
+func (b *Bridge) RemoveDevice(ID string) error {
 	// check if the device was hot plugged in the bridge
 	for addr, devID := range b.Address {
 		if devID == ID {
@@ -70,3 +66,13 @@ func (b *PCIBridge) RemoveDevice(ID string) error {
 
 	return fmt.Errorf("Unable to hot unplug device %s: not present on bridge", ID)
 }
+
+const pciBridgeMaxCapacity = 30
+
+const (
+	// PCI represents a PCI bus and bridge
+	PCI Type = "pci"
+
+	// PCIE represents a PCIe bus and bridge
+	PCIE Type = "pcie"
+)
