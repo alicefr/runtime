@@ -73,6 +73,7 @@ var (
 	kata9pDevType            = "9p"
 	kataMmioBlkDevType       = "mmioblk"
 	kataBlkDevType           = "blk"
+	kataBlkCCWDevType        = "blk-ccw"
 	kataSCSIDevType          = "scsi"
 	kataNvdimmDevType        = "nvdimm"
 	kataVirtioFSDevType      = "virtio-fs"
@@ -1024,6 +1025,9 @@ func (k *kataAgent) appendDevices(deviceList []*grpc.Device, c *Container) []*gr
 			kataDevice.Type = kataMmioBlkDevType
 			kataDevice.Id = d.VirtPath
 			kataDevice.VmPath = d.VirtPath
+		case config.VirtioBlockCCW:
+			kataDevice.Type = kataBlkCCWDevType
+			kataDevice.Id = d.DevNo
 		case config.VirtioBlock:
 			kataDevice.Type = kataBlkDevType
 			kataDevice.Id = d.PCIAddr
@@ -1078,17 +1082,21 @@ func (k *kataAgent) buildContainerRootfs(sandbox *Sandbox, c *Container, rootPat
 			k.Logger().Error("malformed block drive")
 			return nil, fmt.Errorf("malformed block drive")
 		}
-
-		if sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioMmio {
+		switch {
+		case sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioMmio:
 			rootfs.Driver = kataMmioBlkDevType
 			rootfs.Source = blockDrive.VirtPath
-		} else if sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioBlock {
+		case sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioBlockCCW:
+			rootfs.Driver = kataBlkCCWDevType
+			rootfs.Source = blockDrive.DevNo
+		case sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioBlock:
 			rootfs.Driver = kataBlkDevType
 			rootfs.Source = blockDrive.PCIAddr
-		} else {
+		case sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioSCSI:
 			rootfs.Driver = kataSCSIDevType
 			rootfs.Source = blockDrive.SCSIAddr
 		}
+
 		rootfs.MountPoint = rootPathParent
 		rootfs.Fstype = c.state.Fstype
 
@@ -1347,13 +1355,17 @@ func (k *kataAgent) handleBlockVolumes(c *Container) []*grpc.Storage {
 			k.Logger().Error("malformed block drive")
 			continue
 		}
-		if c.sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioBlock {
+		switch {
+		case c.sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioBlockCCW:
+			vol.Driver = kataBlkCCWDevType
+			vol.Source = blockDrive.DevNo
+		case c.sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioBlock:
 			vol.Driver = kataBlkDevType
 			vol.Source = blockDrive.PCIAddr
-		} else if c.sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioMmio {
+		case c.sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioMmio:
 			vol.Driver = kataMmioBlkDevType
 			vol.Source = blockDrive.VirtPath
-		} else {
+		case c.sandbox.config.HypervisorConfig.BlockDeviceDriver == config.VirtioSCSI:
 			vol.Driver = kataSCSIDevType
 			vol.Source = blockDrive.SCSIAddr
 		}
