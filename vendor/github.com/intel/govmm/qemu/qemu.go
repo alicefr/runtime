@@ -71,6 +71,9 @@ const (
 	// VirtioBlock is the block device driver.
 	VirtioBlock DeviceDriver = "virtio-blk"
 
+	// VirtioBlockPCI is a pci bus block device driver
+	VirtioBlockPCI DeviceDriver = "virtio-blk-pci"
+
 	// Console is the console device driver.
 	Console DeviceDriver = "virtconsole"
 
@@ -100,6 +103,9 @@ const (
 
 	// PCIePCIBridgeDriver represents a PCIe to PCI bridge device type.
 	PCIePCIBridgeDriver DeviceDriver = "pcie-pci-bridge"
+
+	// VirtioBlockCCW is the CCW block device driver
+	VirtioBlockCCW DeviceDriver = "virtio-blk-ccw"
 )
 
 // disableModern returns the parameters with the disable-modern option.
@@ -246,6 +252,9 @@ type FSDevice struct {
 
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 // Valid returns true if the FSDevice structure is valid and complete.
@@ -271,6 +280,9 @@ func (fsdev FSDevice) QemuParams(config *Config) []string {
 	deviceParams = append(deviceParams, fmt.Sprintf(",mount_tag=%s", fsdev.MountTag))
 	if isVirtioPCI[fsdev.Driver] {
 		deviceParams = append(deviceParams, fmt.Sprintf(",romfile=%s", fsdev.ROMFile))
+	}
+	if isVirtioCCW[fsdev.Driver] {
+		deviceParams = append(deviceParams, fmt.Sprintf(",devno=%s", fsdev.DevNo))
 	}
 
 	fsParams = append(fsParams, string(fsdev.FSDriver))
@@ -332,6 +344,9 @@ type CharDevice struct {
 
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 // Valid returns true if the CharDevice structure is valid and complete.
@@ -363,6 +378,10 @@ func (cdev CharDevice) QemuParams(config *Config) []string {
 	}
 	if isVirtioPCI[cdev.Driver] {
 		deviceParams = append(deviceParams, fmt.Sprintf(",romfile=%s", cdev.ROMFile))
+	}
+
+	if isVirtioCCW[cdev.Driver] {
+		deviceParams = append(deviceParams, fmt.Sprintf(",devno=%s", cdev.DevNo))
 	}
 
 	cdevParams = append(cdevParams, string(cdev.Backend))
@@ -447,6 +466,9 @@ type NetDevice struct {
 
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 // Valid returns true if the NetDevice structure is valid and complete.
@@ -485,6 +507,7 @@ func (netdev NetDevice) mqParameter() string {
 		vectors := len(netdev.FDs)*2 + 2
 		p = append(p, fmt.Sprintf(",vectors=%d", vectors))
 	}
+
 	return strings.Join(p, "")
 }
 
@@ -521,6 +544,10 @@ func (netdev NetDevice) QemuDeviceParams(config *Config) []string {
 
 	if isVirtioPCI[netdev.Driver] {
 		deviceParams = append(deviceParams, fmt.Sprintf(",romfile=%s", netdev.ROMFile))
+	}
+
+	if isVirtioCCW[netdev.Driver] {
+		deviceParams = append(deviceParams, fmt.Sprintf(",devno=%s", netdev.DevNo))
 	}
 
 	return deviceParams
@@ -614,6 +641,9 @@ type SerialDevice struct {
 
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 // Valid returns true if the SerialDevice structure is valid and complete.
@@ -637,6 +667,10 @@ func (dev SerialDevice) QemuParams(config *Config) []string {
 	deviceParams = append(deviceParams, fmt.Sprintf(",id=%s", dev.ID))
 	if isVirtioPCI[dev.Driver] {
 		deviceParams = append(deviceParams, fmt.Sprintf(",romfile=%s", dev.ROMFile))
+	}
+
+	if isVirtioCCW[dev.Driver] {
+		deviceParams = append(deviceParams, fmt.Sprintf(",devno=%s", dev.DevNo))
 	}
 
 	qemuParams = append(qemuParams, "-device")
@@ -691,6 +725,9 @@ type BlockDevice struct {
 
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 // Valid returns true if the BlockDevice structure is valid and complete.
@@ -723,6 +760,10 @@ func (blkdev BlockDevice) QemuParams(config *Config) []string {
 
 	if isVirtioPCI[blkdev.Driver] {
 		deviceParams = append(deviceParams, fmt.Sprintf(",romfile=%s", blkdev.ROMFile))
+	}
+
+	if isVirtioCCW[blkdev.Driver] {
+		deviceParams = append(deviceParams, fmt.Sprintf(",devno=%s", blkdev.DevNo))
 	}
 
 	blkParams = append(blkParams, fmt.Sprintf("id=%s", blkdev.ID))
@@ -857,6 +898,9 @@ type VFIODevice struct {
 
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 // Valid returns true if the VFIODevice structure is valid and complete.
@@ -874,6 +918,10 @@ func (vfioDev VFIODevice) QemuParams(config *Config) []string {
 	deviceParams = append(deviceParams, fmt.Sprintf("%s,host=%s", driver, vfioDev.BDF))
 	if isVirtioPCI[driver] {
 		deviceParams = append(deviceParams, fmt.Sprintf(",romfile=%s", vfioDev.ROMFile))
+	}
+
+	if isVirtioCCW[driver] {
+		deviceParams = append(deviceParams, fmt.Sprintf(",devno=%s", vfioDev.DevNo))
 	}
 
 	qemuParams = append(qemuParams, "-device")
@@ -900,6 +948,9 @@ type SCSIController struct {
 
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 // Valid returns true if the SCSIController structure is valid and complete.
@@ -928,6 +979,10 @@ func (scsiCon SCSIController) QemuParams(config *Config) []string {
 	}
 	if isVirtioPCI[driver] {
 		devParams = append(devParams, fmt.Sprintf("romfile=%s", scsiCon.ROMFile))
+	}
+
+	if isVirtioCCW[driver] {
+		devParams = append(devParams, fmt.Sprintf("devno=%s", scsiCon.DevNo))
 	}
 
 	qemuParams = append(qemuParams, "-device")
@@ -1038,6 +1093,9 @@ type VSOCKDevice struct {
 
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 const (
@@ -1083,6 +1141,10 @@ func (vsock VSOCKDevice) QemuParams(config *Config) []string {
 		deviceParams = append(deviceParams, fmt.Sprintf(",romfile=%s", vsock.ROMFile))
 	}
 
+	if isVirtioCCW[driver] {
+		deviceParams = append(deviceParams, fmt.Sprintf(",devno=%s", vsock.DevNo))
+	}
+
 	qemuParams = append(qemuParams, "-device")
 	qemuParams = append(qemuParams, strings.Join(deviceParams, ""))
 
@@ -1101,6 +1163,8 @@ type RngDevice struct {
 	Period uint
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 // Valid returns true if the RngDevice structure is valid and complete.
@@ -1126,6 +1190,10 @@ func (v RngDevice) QemuParams(_ *Config) []string {
 
 	if isVirtioPCI[driver] {
 		deviceParams = append(deviceParams, fmt.Sprintf("romfile=%s", v.ROMFile))
+	}
+
+	if isVirtioCCW[driver] {
+		deviceParams = append(deviceParams, fmt.Sprintf("devno=%s", v.DevNo))
 	}
 
 	if v.Filename != "" {
@@ -1157,6 +1225,9 @@ type BalloonDevice struct {
 
 	// ROMFile specifies the ROM file being used for this device.
 	ROMFile string
+
+	// DevNo identifies the ccw devices for s390x architecture
+	DevNo string
 }
 
 // QemuParams returns the qemu parameters built out of the BalloonDevice.
@@ -1173,6 +1244,10 @@ func (b BalloonDevice) QemuParams(_ *Config) []string {
 
 	if isVirtioPCI[driver] {
 		deviceParams = append(deviceParams, fmt.Sprintf("romfile=%s", b.ROMFile))
+	}
+
+	if isVirtioCCW[driver] {
+		deviceParams = append(deviceParams, fmt.Sprintf("devno=%s", b.DevNo))
 	}
 
 	if b.DeflateOnOOM {
@@ -1394,6 +1469,8 @@ const (
 	MigrationFD = 1
 	// MigrationExec is the migration incoming type based on commands.
 	MigrationExec = 2
+	// MigrationDefer is the defer incoming type
+	MigrationDefer = 3
 )
 
 // Incoming controls migration source preparation
@@ -1776,6 +1853,8 @@ func (config *Config) appendIncoming() {
 	case MigrationFD:
 		chFDs := config.appendFDs([]*os.File{config.Incoming.FD})
 		uri = fmt.Sprintf("fd:%d", chFDs[0])
+	case MigrationDefer:
+		uri = "defer"
 	default:
 		return
 	}

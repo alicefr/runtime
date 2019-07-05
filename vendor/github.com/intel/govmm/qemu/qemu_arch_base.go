@@ -47,6 +47,7 @@ var isVirtioPCI = map[DeviceDriver]bool{
 	VirtioNetPCI:        true,
 	VirtioSerial:        true,
 	VirtioBlock:         true,
+	VirtioBlockPCI:      true,
 	Console:             false,
 	VirtioSerialPort:    false,
 	VHostVSock:          true,
@@ -59,6 +60,9 @@ var isVirtioPCI = map[DeviceDriver]bool{
 	PCIBridgeDriver:     true,
 	PCIePCIBridgeDriver: true,
 }
+
+// isVirtioCCW is a dummy map to return always false on no-s390x arch
+var isVirtioCCW = map[DeviceDriver]bool{}
 
 // QemuNetdevParam converts to the QEMU -netdev parameter notation
 func (n NetDeviceType) QemuNetdevParam() string {
